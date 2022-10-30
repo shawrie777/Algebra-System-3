@@ -1,0 +1,194 @@
+﻿<Page
+    x:Class="Algebra_System_3.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Algebra_System_3"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    x:Name="root">
+    <Page.Resources>
+        <Style x:Key="RichEditBoxStyle1" TargetType="RichEditBox">
+            <Setter Property="Foreground" Value="{ThemeResource TextControlForeground}"/>
+            <Setter Property="Background" Value="{ThemeResource TextControlBackground}"/>
+            <Setter Property="ContentLinkForegroundColor" Value="{ThemeResource ContentLinkForegroundColor}"/>
+            <Setter Property="ContentLinkBackgroundColor" Value="{ThemeResource ContentLinkBackgroundColor}"/>
+            <Setter Property="SelectionHighlightColor" Value="{ThemeResource TextControlSelectionHighlightColor}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource TextControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="{ThemeResource TextControlBorderThemeThickness}"/>
+            <Setter Property="FontFamily" Value="{ThemeResource ContentControlThemeFontFamily}"/>
+            <Setter Property="FontSize" Value="{ThemeResource ControlContentThemeFontSize}"/>
+            <Setter Property="ScrollViewer.HorizontalScrollMode" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollMode" Value="Auto"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.IsDeferredScrollingEnabled" Value="False"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Padding" Value="{ThemeResource TextControlThemePadding}"/>
+            <Setter Property="UseSystemFocusVisuals" Value="{ThemeResource IsApplicationFocusVisualKindReveal}"/>
+            <Setter Property="ContextFlyout" Value="{StaticResource TextControlCommandBarContextFlyout}"/>
+            <!--<Setter Property="SelectionFlyout" Value="{StaticResource TextControlCommandBarSelectionFlyout}"/>-->
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RichEditBox">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Disabled">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeaderContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlHeaderForegroundDisabled}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BorderElement" Storyboard.TargetProperty="Background">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlBackgroundDisabled}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BorderElement" Storyboard.TargetProperty="BorderBrush">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlBorderBrushDisabled}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentElement" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlForegroundDisabled}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PlaceholderTextContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlPlaceholderForegroundDisabled}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Normal"/>
+                                    <VisualState x:Name="PointerOver">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BorderElement" Storyboard.TargetProperty="BorderBrush">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlBorderBrushPointerOver}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BorderElement" Storyboard.TargetProperty="Background">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlBackgroundPointerOver}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PlaceholderTextContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlPlaceholderForegroundPointerOver}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentElement" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlForegroundPointerOver}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Focused">
+                                        <Storyboard>
+                                            <!--<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PlaceholderTextContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlPlaceholderForegroundFocused}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BorderElement" Storyboard.TargetProperty="Background">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlBackgroundFocused}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BorderElement" Storyboard.TargetProperty="BorderBrush">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlBorderBrushFocused}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentElement" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource TextControlForegroundFocused}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentElement" Storyboard.TargetProperty="RequestedTheme">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="Light"/>
+                                            </ObjectAnimationUsingKeyFrames>-->
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter x:Name="HeaderContentPresenter" ContentTemplate="{TemplateBinding HeaderTemplate}" Content="{TemplateBinding Header}" Foreground="{ThemeResource TextControlHeaderForeground}" FontWeight="Normal" Margin="{ThemeResource RichEditBoxTopHeaderMargin}" Grid.Row="0" TextWrapping="Wrap" VerticalAlignment="Top" Visibility="Collapsed" x:DeferLoadStrategy="Lazy"/>
+                            <Border x:Name="BorderElement" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" MinWidth="{ThemeResource TextControlThemeMinWidth}" MinHeight="{ThemeResource TextControlThemeMinHeight}" Grid.RowSpan="1" Grid.Row="1"/>
+                            <ScrollViewer x:Name="ContentElement" AutomationProperties.AccessibilityView="Raw" HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}" HorizontalScrollMode="{TemplateBinding ScrollViewer.HorizontalScrollMode}" IsDeferredScrollingEnabled="{TemplateBinding ScrollViewer.IsDeferredScrollingEnabled}" IsTabStop="False" IsVerticalRailEnabled="{TemplateBinding ScrollViewer.IsVerticalRailEnabled}" IsHorizontalRailEnabled="{TemplateBinding ScrollViewer.IsHorizontalRailEnabled}" Margin="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" Grid.Row="1" VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}" VerticalScrollMode="{TemplateBinding ScrollViewer.VerticalScrollMode}" ZoomMode="Disabled"/>
+                            <TextBlock x:Name="PlaceholderTextContentPresenter" Foreground="{ThemeResource TextControlPlaceholderForeground}" IsHitTestVisible="False" Margin="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" Grid.Row="1" TextAlignment="{TemplateBinding TextAlignment}" TextWrapping="{TemplateBinding TextWrapping}" Text="{TemplateBinding PlaceholderText}"/>
+                            <ContentPresenter x:Name="DescriptionPresenter" AutomationProperties.AccessibilityView="Raw" Content="{TemplateBinding Description}" Foreground="{ThemeResource SystemControlDescriptionTextForegroundBrush}" Grid.Row="2" x:Load="False"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
+
+
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="mainStack">
+
+        <Grid x:Name="Layout" Width="1200" Height="850">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="400"/>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="400"/>
+            </Grid.RowDefinitions>
+            <RichEditBox Style="{StaticResource RichEditBoxStyle1}" Grid.Row="0" x:Name="MainBox" Height ="400" Width="1200" Background="Transparent" Foreground="White" FontFamily="Cambria Math" FontSize="40" BorderThickness="5,5,5,5" BorderBrush="White" SelectionHighlightColor="#FF35B159" SelectionHighlightColorWhenNotFocused="#FF35B159" TabNavigation="Once" TextChanged="MainBox_TextChanged" KeyDown="MainBox_KeyDown" IsTextPredictionEnabled="False" IsSpellCheckEnabled="False"/>
+            <Grid x:Name="keyboard" Width="1200" Height="400" Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="130"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="130"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="80"/>
+                    <RowDefinition Height="80"/>
+                    <RowDefinition Height="80"/>
+                    <RowDefinition Height="80"/>
+                    <RowDefinition Height="80"/>
+                </Grid.RowDefinitions>
+                <Button Grid.Row="0" Grid.Column="7" Height="80" Width="80" Name="α" Content="α" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="0" Grid.Column="8" Height="80" Width="80" Name="β" Content="β" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="0" Grid.Column="9" Height="80" Width="80" Name="γ" Content="γ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="0" Grid.Column="10" Height="80" Width="80" Name="δ" Content="δ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="0" Grid.Column="11" Height="80" Width="80" Name="ε" Content="ε" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="1" Grid.Column="7" Height="80" Width="80" Name="ζ" Content="ζ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="1" Grid.Column="8" Height="80" Width="80" Name="η" Content="η" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="1" Grid.Column="9" Height="80" Width="80" Name="θ" Content="θ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="1" Grid.Column="10" Height="80" Width="80" Name="ι" Content="ι" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="1" Grid.Column="11" Height="80" Width="80" Name="κ" Content="κ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="2" Grid.Column="7" Height="80" Width="80" Name="λ" Content="λ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="2" Grid.Column="8" Height="80" Width="80" Name="μ" Content="μ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="2" Grid.Column="9" Height="80" Width="80" Name="ν" Content="ν" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="2" Grid.Column="10" Height="80" Width="80" Name="ξ" Content="ξ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="2" Grid.Column="11" Height="80" Width="80" Name="ο" Content="ο" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="3" Grid.Column="7" Height="80" Width="80" Name="π" Content="π" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="3" Grid.Column="8" Height="80" Width="80" Name="ρ" Content="ρ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="3" Grid.Column="9" Height="80" Width="80" Name="σ" Content="σ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="3" Grid.Column="10" Height="80" Width="80" Name="τ" Content="τ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="3" Grid.Column="11" Height="80" Width="80" Name="υ" Content="υ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="4" Grid.Column="8" Height="80" Width="80" Name="φ" Content="φ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="4" Grid.Column="9" Height="80" Width="80" Name="χ" Content="χ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="4" Grid.Column="10" Height="80" Width="80" Name="ψ" Content="ψ" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="4" Grid.Column="11" Height="80" Width="80" Name="ω" Content="ω" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <ToggleSwitch x:Name="Caps" Header="Uppercase" Margin="-60,0,0,0" Grid.Row="4" Grid.Column="7" Width="135" Height="80" Grid.ColumnSpan="2" FontFamily="Cambria Math" FontSize="28"/>
+
+                <Button Grid.Row="0" Grid.Column="1" Height="80" Width="80" Name="root2" Content="√" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="0" Grid.Column="2" Height="80" Width="80" Name="root3" Content="∛" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+                <Button Grid.Row="0" Grid.Column="3" Height="80" Width="80" Name="root4" Content="∜" FontFamily="Cambria Math" FontSize="35" Click="Button_Click"/>
+
+                <Button Grid.Row="0" Grid.Column="0" Height="60" Width="60" Name="Sub" Margin="5,0,0,0" FontFamily="Cambria Math" FontSize="35" Click="Sub_Click">
+                    <RichTextBlock IsTextSelectionEnabled="False">
+                        <Paragraph>
+                            x
+                            <Run Typography.Variants="Subscript">2</Run>
+                        </Paragraph>
+                    </RichTextBlock>
+                </Button>
+                <Button Grid.Row="0" Grid.Column="0" Height="60" Width="60" Name="Super" Margin="65,0,0,0" FontFamily="Cambria Math" FontSize="35" Click="Super_Click">
+                    <RichTextBlock IsTextSelectionEnabled="False">
+                        <Paragraph>
+                            x
+                            <Run Typography.Variants="Superscript">2</Run>
+                        </Paragraph>
+                    </RichTextBlock>
+                </Button>
+            </Grid>
+        </Grid>
+    </StackPanel>
+</Page>
