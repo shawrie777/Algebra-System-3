@@ -18,6 +18,7 @@ namespace algebra
 
 		std::vector <std::pair<operation, bool>> operations;
 		int bracketDepth = 0;
+		int maxDepth = 0;
 
 		std::wstring str = WS.str();
 		bool neg = false;
@@ -79,6 +80,7 @@ namespace algebra
 			else if (token == L"(")
 			{
 				bracketDepth++;
+				maxDepth = bracketDepth > maxDepth ? bracketDepth : maxDepth;
 				continue;
 			}
 			else if (token == L")")
@@ -107,7 +109,6 @@ namespace algebra
 			operations.push_back({ op,false });
 		}
 
-		bool productCheck = true;
 		//stack operations into a single operation based on priority
 		while (operations.size() > 1)
 		{
@@ -118,20 +119,24 @@ namespace algebra
 					found = it;
 			}
 
-			if ((found == operations.end() || found->first.getPriority() < 75) && productCheck)
+			bool endCheck = found == operations.end();
+			if (endCheck || found->first.getPriority() < 75 + 100 * maxDepth)
 			{
 				auto it = operations.begin() + 1;
 				while (it != operations.end())
 				{
-					if (it->second && (it - 1)->second)
+					if (endCheck || (it->second && (it - 1)->second && (ceil(it->first.getPriority()/100.0f) == ceil((it-1)->first.getPriority()/100.0f)
+						&& ceil(it->first.getPriority() / 100.0f) < maxDepth + 1)))
 					{
 						operation P(opType::product);
+						P.setBracketCount(maxDepth);
 						it = operations.insert(it, { P,false });
+						break;
 					}
 					else
 						it++;
 				}
-				productCheck = false;
+				if (!endCheck) maxDepth--;				
 				continue;
 			}
 			
@@ -153,13 +158,13 @@ namespace algebra
 			}
 		}
 
-		try
-		{
-			polynomial P(operations[0].first.simplify());
-			P.ratRoots();
-		}
-		catch (int x)
-		{};
+		//try
+		//{
+		//	polynomial P(operations[0].first.simplify());
+		//	P.ratRoots();
+		//}
+		//catch (int x)
+		//{};
 
 
 

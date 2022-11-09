@@ -45,6 +45,7 @@ namespace algebra
 		wchar_t Symbol = L' ';		
 
 		void gatherTerms();
+		void distribute();
 	public:
 		operation(opType type);
 		operation(int intVal);

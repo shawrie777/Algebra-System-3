@@ -163,7 +163,7 @@ namespace algebra
 
 	bool in_equal(operation& lhs, operation& rhs)
 	{
-		if (lhs.priority != rhs.priority)
+		if (lhs.Type != rhs.Type)
 			return false;
 		if (lhs.operands.size() != rhs.operands.size())
 			return false;
@@ -316,12 +316,15 @@ namespace algebra
 
 	void operation::negate()
 	{
-		if (std::holds_alternative<int>(value))
-			value = std::get<0>(value) * -1;
-		else if (std::holds_alternative<std::pair<int, int>>(value))
-		{
-			std::pair<int, int> val = std::get<1>(value);
-			value = std::pair<int, int>(-1 * val.first, val.second);
+		if (isNumber())
+		{		
+			if (std::holds_alternative<int>(value))
+				value = std::get<0>(value) * -1;
+			else if (std::holds_alternative<std::pair<int, int>>(value))
+			{
+				std::pair<int, int> val = std::get<1>(value);
+				value = std::pair<int, int>(-1 * val.first, val.second);
+			}
 		}
 		else
 		{
@@ -380,7 +383,8 @@ namespace algebra
 		}
 		break;
 		case opType::product:
-			gatherTerms();
+			distribute();
+			gatherTerms();			
 			return *this;
 			break;
 		case opType::power:
@@ -565,6 +569,12 @@ namespace algebra
 			operation result(opType::sum);
 			while (termIt != terms.end())
 			{
+				if (termIt->first.first == 0)
+				{					
+					termIt++;
+					continue;
+				}
+
 				//coef is 1
 				if (termIt->first.first == 1 && termIt->first.second == 1)
 					result.addOperand(termIt->second);
@@ -673,6 +683,7 @@ namespace algebra
 			if (fracTerm.first == 0)
 			{
 				*this = operation(0);
+				return;
 			}
 			else if (fracTerm.second == 1 && fracTerm.first != 1)
 			{
@@ -702,6 +713,35 @@ namespace algebra
 				*this = result.operands[0];
 			else
 				*this = result;
+		}
+	}
+
+	void operation::distribute()
+	{
+		if (Type == opType::product)
+		{
+			operation pCopy = *this;
+			auto it = pCopy.operands.begin();
+			while (it != pCopy.operands.end())
+			{
+				if (it->Type == opType::sum)
+				{
+					operation result(opType::sum);
+					operation sCopy = *it;
+					pCopy.operands.erase(it);
+					for (auto& k : sCopy.operands)
+					{
+						operation P(opType::product);
+						P.addOperand(k);
+						P.addOperand(pCopy);
+						P.simplify();
+						result.addOperand(P);
+					}
+					*this = result.simplify();
+					return;
+				}
+				it++;
+			}
 		}
 	}
 
