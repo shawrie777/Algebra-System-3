@@ -26,6 +26,8 @@ std::vector<int> factors(int x)
 	}
 
 	std::sort (result.begin(), result.end());
+	result.erase(std::unique(result.begin(), result.end()), result.end());
+
 	return result;
 }
 

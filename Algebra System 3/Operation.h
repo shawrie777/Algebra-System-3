@@ -14,8 +14,9 @@ namespace algebra
 		rational,
 		variable,
 		sum,	
-		product,////////////
-		power
+		product,
+		power,
+		GCD////////////////
 	};
 
 	enum class opPosition
@@ -38,7 +39,7 @@ namespace algebra
 	private:
 		int operandCount = 0;
 		std::vector<operation> operands;
-		int priority = 0;
+		int priority = 101;
 		opType Type;
 		opPosition OpPosition = opPosition::none;
 		std::variant<int, std::pair<int, int>, double> value;
@@ -46,6 +47,9 @@ namespace algebra
 
 		void gatherTerms();
 		void distribute();
+		void factorise();
+		void splitFrac();
+
 	public:
 		operation(opType type);
 		operation(int intVal);
@@ -65,6 +69,7 @@ namespace algebra
 		void negate();
 		void invert();
 
+		bool hasOperands();
 		bool isPolynomial();
 		
 		std::variant<int, std::pair<int, int>, double> getValue();
@@ -86,6 +91,7 @@ namespace algebra
 		bool testValue(operation val);
 		std::vector<operation> ratRoots();
 		operation ratFactor();
+		const wchar_t getSymbol() const { return symbol; };
 
 		operation ToOperation();
 	};

@@ -28,6 +28,11 @@ namespace algebra
 		return lhs.priority != rhs.priority;
 	}
 
+	bool operation::hasOperands()
+	{
+		return operands.size() != 0;
+	}
+
 	bool operation::isPolynomial()
 	{
 		if (Type != opType::sum)
@@ -110,11 +115,7 @@ namespace algebra
 	//only for use in sort functions
 	bool in_lessThan(operation& lhs, operation& rhs)
 	{
-		if (lhs.priority < rhs.priority)
-			return true;
-		else if (lhs.priority > rhs.priority)
-			return false;
-		else if (lhs.operands.size() < rhs.operands.size())
+		if (lhs.operands.size() < rhs.operands.size())
 			return true;
 		else if (lhs.operands.size() > rhs.operands.size())
 			return false;
@@ -145,6 +146,8 @@ namespace algebra
 
 			return lval < rval;
 		}
+		else if (lhs.Type == opType::variable && rhs.Type == opType::variable)
+			return lhs.Symbol < rhs.Symbol;
 
 		std::vector<operation> lcopy = lhs.operands;
 		std::vector<operation> rcopy = rhs.operands;
@@ -166,8 +169,6 @@ namespace algebra
 		if (lhs.Type != rhs.Type)
 			return false;
 		if (lhs.operands.size() != rhs.operands.size())
-			return false;
-		if (lhs.Type != rhs.Type)
 			return false;
 
 		if (lhs.Type == opType::integer && std::get<0>(lhs.value) != std::get<0>(rhs.value))
@@ -221,6 +222,11 @@ namespace algebra
 			operandCount = 2;
 			priority = 90;
 			OpPosition = opPosition::both;
+			break;
+		case opType::GCD:
+			operandCount = -1;
+			priority = 25;
+			OpPosition = opPosition::after;
 			break;
 		default:
 			break;
@@ -293,6 +299,7 @@ namespace algebra
 		{
 		case opType::sum:
 		case opType::product:
+		case opType::GCD:
 		{
 			auto it = operands.begin();
 			while (it != operands.end())
@@ -338,12 +345,15 @@ namespace algebra
 
 	void operation::invert()
 	{
-		if (std::holds_alternative<int>(value))
-			value = std::pair<int, int>(1, std::get<0>(value));
-		else if (std::holds_alternative <std::pair<int, int>>(value))
+		if (isNumber())
 		{
-			std::pair<int, int> val = std::get<1>(value);
-			value = std::pair<int, int>(val.second, val.first);
+			if (std::holds_alternative<int>(value))
+				value = std::pair<int, int>(1, std::get<0>(value));
+			else if (std::holds_alternative <std::pair<int, int>>(value))
+			{
+				std::pair<int, int> val = std::get<1>(value);
+				value = std::pair<int, int>(val.second, val.first);
+			}
 		}
 		else if (Type == opType::power)
 		{
@@ -356,7 +366,7 @@ namespace algebra
 			op.addOperand(*this);
 			op.addOperand(minus);
 			*this = op;
-		}
+		}		
 	}
 
 	std::variant<int, std::pair<int, int>, double> operation::getValue()
@@ -373,23 +383,44 @@ namespace algebra
 		unNest();
 		for (auto it = operands.begin(); it != operands.end(); it++)
 			it->simplify();
+		unNest();
+
 
 		switch (Type)
 		{
 		case opType::sum:
 		{
-			gatherTerms();			
+			gatherTerms();
 			return *this;
 		}
 		break;
 		case opType::product:
-			distribute();
-			gatherTerms();			
+			for (auto& O : operands)
+				if (O.type() == opType::power)
+					O.distribute();
+
+			if (std::any_of(operands.begin(), operands.end(), [](operation& O) {return O.type() == opType::sum;}))
+			{
+				for (auto& O : operands)
+					O.factorise();
+				unNest();
+				gatherTerms();
+			}
+			//split negative powers, then distribute each seperately
+			splitFrac();
+			
+			gatherTerms();
 			return *this;
 			break;
 		case opType::power:
-			//needs filling
-			//break;
+			if (std::any_of(operands.begin(), operands.end(), [](operation& O) {return O.type() == opType::sum; }))
+			{
+				for (auto& O : operands)
+					O.factorise();
+			}
+			distribute();
+			return *this;
+			break;
 		default:
 			return *this;
 			break;
@@ -439,8 +470,16 @@ namespace algebra
 				if (symbol && (k.Type == opType::integer || k.Type == opType::rational))
 					output.push_back({ L'*',charProps() });
 
+				if (k.Type == opType::sum)
+					output.push_back({ L'(',charProps() });
+
 				auto temp = k.write();
 				output.insert(output.end(), temp.begin(), temp.end());
+				if (k.Type == opType::integer && std::get<0>(k.value) == -1)
+					output.pop_back();
+
+				if (k.Type == opType::sum)
+					output.push_back({ L')',charProps() });
 				
 				symbol = k.Type == opType::integer || k.Type == opType::rational;
 			}
@@ -448,19 +487,83 @@ namespace algebra
 			break;
 		case opType::power:
 		{
-			auto temp = operands[0].write();
-			output.insert(output.end(), temp.begin(), temp.end());
-
-			temp = operands[1].write();
-			charProps powProp;
-			powProp.superscript = true;
-
-			for (auto& k : temp)
+			operation zero(0);
+			if (operands[1].isNumber() && std::get<int>(operands[1].getValue()) == 1)
 			{
-				k.second += powProp;
-				output.push_back(k);
+				return operands[0].write();
+			}
+			else if (operands[1].isNumber() && std::get<int>(operands[1].getValue()) == -1)
+			{
+				output.push_back({ L'/',charProps() });
+
+				if (operands[0].hasOperands())
+					output.push_back({ L'(', charProps() });
+				auto temp = operands[0].write();
+				output.insert(output.end(), temp.begin(), temp.end());
+
+				if (operands[0].hasOperands())
+					output.push_back({ L')', charProps() });
+			}
+			else if (operands[1].isNumber() && in_lessThan(operands[1],zero))
+			{
+				output.push_back({ L'/',charProps() });
+
+				if (operands[0].hasOperands())
+					output.push_back({ L'(', charProps() });
+				auto temp = operands[0].write();
+				output.insert(output.end(), temp.begin(), temp.end());
+
+				if (operands[0].hasOperands())
+					output.push_back({ L')', charProps() });
+
+				operands[1].negate();
+				temp = operands[1].write();
+				charProps powProp;
+				powProp.superscript = true;
+
+				for (auto& k : temp)
+				{
+					k.second += powProp;
+					output.push_back(k);
+				}
+			}
+			else
+			{
+				if (operands[0].hasOperands())
+					output.push_back({ L'(', charProps() });
+				auto temp = operands[0].write();
+				output.insert(output.end(), temp.begin(), temp.end());
+
+				if (operands[0].hasOperands())
+					output.push_back({ L')', charProps() });
+
+				temp = operands[1].write();
+				charProps powProp;
+				powProp.superscript = true;
+
+				for (auto& k : temp)
+				{
+					k.second += powProp;
+					output.push_back(k);
+				}
 			}
 		}
+			break;
+		case opType::GCD:
+			output.push_back({ L'G',charProps() });
+			output.push_back({ L'C',charProps() });
+			output.push_back({ L'D',charProps() });
+			output.push_back({ L'(',charProps() });
+
+			for (auto& k : operands)
+			{
+				auto temp = k.write();
+				output.insert(output.end(), temp.begin(), temp.end());
+				output.push_back({ ',',charProps() });
+			}
+			output.pop_back();
+			output.push_back({ ')',charProps() });
+			
 			break;
 		default:
 			break;
@@ -695,11 +798,14 @@ namespace algebra
 				operation R(fracTerm.first, fracTerm.second);
 				result.addOperand(R);
 			}
+
+			operation zero(0);
+
 			while (termIt != terms.end())
 			{
 				if (termIt->second.Type == opType::integer && std::get<0>(termIt->second.value) == 1)
 					result.addOperand(termIt->first);
-				else
+				else if (!(in_equal(termIt->second, zero)))
 				{
 					operation P(opType::power);
 					P.addOperand(termIt->first);
@@ -743,6 +849,95 @@ namespace algebra
 				it++;
 			}
 		}
+		else if (Type == opType::power)
+		{
+			if (operands[0].Type == opType::product)
+			{
+				operation result(opType::product);
+				operation pow = operands[1];
+				for (auto& k : operands[0].operands)
+				{
+					operation P(opType::power);
+					P.addOperand(k);
+					P.addOperand(pow);
+					P.simplify();
+					result.addOperand(P);
+				}
+				*this = result;
+			}
+
+		}
+	}
+
+	void operation::factorise()
+	{
+		if (Type == opType::sum)
+		{
+			try
+			{
+				polynomial P(*this);
+				auto roots = P.ratRoots();
+				operation prod(opType::product);
+				auto symbol = P.getSymbol();
+				for (auto op : roots)
+				{
+					operation sub(opType::sum);
+					operation var(symbol);
+					sub.addOperand(var);
+					op.negate();
+					sub.addOperand(op);
+					prod.addOperand(sub);
+				}
+				if (prod.operands.size() == 1)
+					return;
+				else
+					*this = prod;
+			}
+			catch (int x)
+			{};
+		}
+	}
+
+	//split product into terms with positive powers and terms with negative powers
+	void operation::splitFrac()
+	{
+		operation top(opType::product);
+		operation bottom(opType::product);
+
+		for (auto& O : operands)
+		{
+			if (O.Type == opType::power && std::get<int>(O.operands[1].getValue()) < 0)
+			{
+				O.operands[1].negate();
+				bottom.addOperand(O);
+			}
+			else
+				top.addOperand(O);
+		}
+
+		if (top.operands.size() == 0)
+			top = operation(1);
+		else if (top.operands.size() == 1)
+			top = top.operands[0];
+		else
+			top.distribute();
+
+		if (bottom.operands.size() == 0)
+		{
+			*this = top;
+			return;
+		}
+		else if (bottom.operands.size() == 1)
+			bottom.addOperand(operation(1));
+		bottom.distribute();
+
+		operation pow(opType::power);
+		pow.addOperand(bottom);
+		pow.addOperand(operation(-1));
+		operation result(opType::product);
+		result.addOperand(top);
+		result.addOperand(pow);
+		*this = result;
 	}
 
 	polynomial::polynomial(std::map<int, std::pair<int, int>> Terms) : terms(Terms)
@@ -846,7 +1041,7 @@ namespace algebra
 
 			for (int k=0; k<order;k++)
 				if (!terms.contains(k))
-					terms.insert({ k,std::make_pair(0,0) });
+					terms.insert({ k,std::make_pair(0,1) });
 		}
 		catch(std::string err)
 		{
@@ -868,7 +1063,7 @@ namespace algebra
 		std::pair total(0,1);
 		for (int i = 0; i < terms.size(); i++)
 		{			
-			std::pair<int,int> term(pow(testVal.first, terms[i].first), pow(testVal.second, terms[i].first));
+			std::pair<int,int> term(pow(testVal.first, i), pow(testVal.second, i));
 			term = term * terms[i];
 			total = total + term;
 		}

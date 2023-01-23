@@ -13,7 +13,7 @@ namespace algebra
 		
 		int openCount = countCharacter(WS, L'(');
 		int closeCount = countCharacter(WS, L')');
-		if (openCount != closeCount)
+		if (openCount - closeCount > 1)
 			throw("Unmatched brackets");
 
 		std::vector <std::pair<operation, bool>> operations;
@@ -22,7 +22,7 @@ namespace algebra
 
 		std::wstring str = WS.str();
 		bool neg = false;
-		bool inv = false;
+		std::vector<int> inv;
 		//tokenizing
 		//set all tokens to search for here
 		std::wregex tokens(L"\\^|\\(|\\)|e|π|φ|\\*|-|/|\\+|([0-9]+\\.?[0-9]*)|[a-zA-ZΑ-Ωα-ω]");
@@ -59,7 +59,7 @@ namespace algebra
 			{
 				neg = true;
 				if (!operations.empty() && (operations.back().first.getPosition() == opPosition::before ||
-					operations.back().first.getPosition() == opPosition::none))
+					operations.back().first.getPosition() == opPosition::none) || operations.back().first.hasOperands())
 					op = operation(opType::sum);
 				else
 					continue;
@@ -75,38 +75,66 @@ namespace algebra
 			else if (token == L"/")
 			{
 				op = operation(opType::product);
-				inv = true;
+				inv.push_back(bracketDepth);
 			}
 			else if (token == L"(")
 			{
+				if (neg)
+				{
+					operation O(-1);
+					O.setBracketCount(bracketDepth);
+					operations.push_back({ O,false });
+					operation P(opType::product);
+					P.setBracketCount(bracketDepth);
+					operations.push_back({ P,false });
+				}
 				bracketDepth++;
 				maxDepth = bracketDepth > maxDepth ? bracketDepth : maxDepth;
 				continue;
 			}
 			else if (token == L")")
 			{
-				bracketDepth--;
-				continue;
+				bracketDepth--;				
 			}
 			else if (token == L"^")
 				op = operation(opType::power);
 			else
 				op = operation(*token.begin());
 
-
+			
 			if (token != L"-" && neg)
 			{
 				op.negate();
 				neg = false;
 			}
-			if (token != L"/" && inv)
+			if (token != L"/" && !inv.empty() && inv.back() == bracketDepth)
 			{
-				op.invert();
-				inv = false;
+				//op.invert();
+				op.setBracketCount(bracketDepth);
+				operations.push_back({ op,false });
+				operation P(opType::power);
+				P.setBracketCount(bracketDepth);
+				operations.push_back({ P,false });
+				operation o(-1);
+				o.setBracketCount(bracketDepth);
+				operations.push_back({ o,false });
+				inv.pop_back();
+				continue;
 			}
 
 			op.setBracketCount(bracketDepth);
 			operations.push_back({ op,false });
+		}
+
+		if (!inv.empty() && inv.back() == bracketDepth)
+		{
+			operation P(opType::power);
+			P.setBracketCount(bracketDepth);
+			operations.push_back({ P,false });
+			operation o(-1);
+			o.setBracketCount(bracketDepth);
+			operations.push_back({ o,false });
+			inv.pop_back();
 		}
 
 		//stack operations into a single operation based on priority
@@ -120,55 +148,60 @@ namespace algebra
 			}
 
 			bool endCheck = found == operations.end();
+
+			if (!endCheck && found->first.type() == opType::empty)
+			{
+				operations.erase(found);
+				continue;
+			}
+
 			if (endCheck || found->first.getPriority() < 75 + 100 * maxDepth)
 			{
 				auto it = operations.begin() + 1;
 				while (it != operations.end())
 				{
 					if (endCheck || (it->second && (it - 1)->second && (ceil(it->first.getPriority()/100.0f) == ceil((it-1)->first.getPriority()/100.0f)
-						&& ceil(it->first.getPriority() / 100.0f) < maxDepth + 1)))
+						/*&& ceil(it->first.getPriority() / 100.0f) < maxDepth + 2*/)))
 					{
 						operation P(opType::product);
 						P.setBracketCount(maxDepth);
 						it = operations.insert(it, { P,false });
-						break;
+						it += 2;
+						continue;
 					}
 					else
 						it++;
 				}
-				if (!endCheck) maxDepth--;				
+				if (!endCheck)
+					maxDepth--;				
 				continue;
 			}
 			
 			found->second = true;
-			switch (found->first.getPosition())
+			if (!found->first.hasOperands())
 			{
-			case opPosition::both:
-				found->first.addOperand((found - 1)->first);
-				found->first.addOperand((found + 1)->first);
-				operations.erase(found + 1);
-				operations.erase(found - 1);
-				break;
-			case opPosition::after:
-				found->first.addOperand((found + 1)->first);
-				operations.erase(found + 1);
-				break;
-			default:
-				break;
+				switch (found->first.getPosition())
+				{
+				case opPosition::both:
+					found->first.addOperand((found - 1)->first);
+					found->first.addOperand((found + 1)->first);
+					operations.erase(found + 1);
+					operations.erase(found - 1);
+					break;
+				case opPosition::after:
+					found->first.addOperand((found + 1)->first);
+					operations.erase(found + 1);
+					break;
+				default:
+					break;
+				}
 			}
 		}
 
-		//try
-		//{
-		//	polynomial P(operations[0].first.simplify());
-		//	P.ratRoots();
-		//}
-		//catch (int x)
-		//{};
-
-
-
 		output = operations[0].first.simplify().write();
+
+		if (output[0].first == L'/')
+			output.insert(output.begin(), { L'1',charProps() });
 
 		main_page->WriteOutput(output);
 	}		
