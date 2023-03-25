@@ -25,7 +25,7 @@ namespace algebra
 		std::vector<int> inv;
 		//tokenizing
 		//set all tokens to search for here
-		std::wregex tokens(L"\\^|\\(|\\)|e|π|φ|\\*|-|/|\\+|([0-9]+\\.?[0-9]*)|[a-zA-ZΑ-Ωα-ω]");
+		std::wregex tokens(L"∈|i|\\{|\\}|=|\\^|\\(|\\)|GCD|,|e|π|φ|\\*|-|/|\\+|([0-9]+\\.?[0-9]*)|[a-zA-ZΑ-Ωα-ω]");
 		auto begin = std::wsregex_iterator(str.begin(), str.end(), tokens);
 		auto end = std::wsregex_iterator();
 
@@ -53,17 +53,25 @@ namespace algebra
 					op = operation(top, bottom);
 				}
 			}
+			else if (token == L"i")
+				op = operation(opType::complex);
 			else if (token == L"+")
 				op = operation(opType::sum);
 			else if (token == L"-")
 			{
 				neg = true;
 				if (!operations.empty() && (operations.back().first.getPosition() == opPosition::before ||
-					operations.back().first.getPosition() == opPosition::none) || operations.back().first.hasOperands())
+					operations.back().first.getPosition() == opPosition::none || operations.back().first.hasOperands()))
 					op = operation(opType::sum);
 				else
 					continue;
 			}
+			else if (token == L",")
+				op = operation(opType::set);
+			else if (token == L"GCD")
+				op = operation(opType::GCD);
+			else if (token == L"=")
+				op = operation(opType::equation);
 			else if (token == L"e")
 				op = constants::E;
 			else if (token == L"φ")
@@ -77,7 +85,7 @@ namespace algebra
 				op = operation(opType::product);
 				inv.push_back(bracketDepth);
 			}
-			else if (token == L"(")
+			else if (token == L"(" || token == L"{")
 			{
 				if (neg)
 				{
@@ -92,12 +100,14 @@ namespace algebra
 				maxDepth = bracketDepth > maxDepth ? bracketDepth : maxDepth;
 				continue;
 			}
-			else if (token == L")")
+			else if (token == L")" || token == L"}")
 			{
-				bracketDepth--;				
+				bracketDepth--;
 			}
 			else if (token == L"^")
 				op = operation(opType::power);
+			else if (token == L"∈")
+				op = operation(opType::isIn);
 			else
 				op = operation(*token.begin());
 

@@ -3,20 +3,27 @@
 #include <memory>
 #include <variant>
 #include "CharProps.h"
+#include <set>
+#include <bitset>
+#include "EqTypes.h"
 
 namespace algebra
 {
 	enum class opType
 	{
 		empty,
+		set,
+		isIn,
 		constant,
 		integer,
 		rational,
+		complex,
 		variable,
 		sum,	
 		product,
 		power,
-		GCD////////////////
+		GCD,
+		equation
 	};
 
 	enum class opPosition
@@ -49,6 +56,10 @@ namespace algebra
 		void distribute();
 		void factorise();
 		void splitFrac();
+		void simpGCD();
+		void solveEquation();
+		eqType getEqType();
+		std::set<wchar_t> getVariables();
 
 	public:
 		operation(opType type);
@@ -71,6 +82,9 @@ namespace algebra
 
 		bool hasOperands();
 		bool isPolynomial();
+
+		//Checks if any operand in the structure is of the given type
+		bool contains(opType O);
 		
 		std::variant<int, std::pair<int, int>, double> getValue();
 		
@@ -82,6 +96,7 @@ namespace algebra
 	{
 	private:
 		std::map<int, std::pair<int, int>> terms;
+		std::map<int, std::pair<int, int>> derivative;
 		int order = 0;
 		wchar_t symbol = L' ';
 

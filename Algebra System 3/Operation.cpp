@@ -2,6 +2,7 @@
 #include "Operation.h"
 #include <numeric>
 #include <set>
+#include <bitset>
 
 namespace algebra
 {
@@ -94,7 +95,7 @@ namespace algebra
 					symbol = it->operands[0].Symbol;
 				else if (it->operands[0].Symbol != symbol)
 					return false;
-				if (it->operands[0].Type != opType::integer)
+				if (it->operands[1].Type != opType::integer)
 					return false;
 			}
 				break;
@@ -183,7 +184,7 @@ namespace algebra
 		std::vector<operation> lcopy = lhs.operands;
 		std::vector<operation> rcopy = rhs.operands;
 
-		std::set<opType> sortable{ opType::sum,opType::product };
+		std::set<opType> sortable{ opType::sum,opType::product,opType::set };
 		if (sortable.find(lhs.Type) != sortable.end())
 		{
 			std::sort(lcopy.begin(), lcopy.end(), in_lessThan);
@@ -202,10 +203,22 @@ namespace algebra
 	{
 		switch (type)
 		{
+		case opType::set:
+			operandCount = -1;
+			priority = 2;
+			OpPosition = opPosition::both;
+			break;
+		case opType::isIn:
+			operandCount = 2;
+			priority = 1;
+			OpPosition = opPosition::both;
 		case opType::integer:
 			priority = 100;
 			break;
 		case opType::rational:
+			priority = 100;
+			break;
+		case opType::complex:
 			priority = 100;
 			break;
 		case opType::sum:
@@ -225,8 +238,13 @@ namespace algebra
 			break;
 		case opType::GCD:
 			operandCount = -1;
-			priority = 25;
+			priority = 85;
 			OpPosition = opPosition::after;
+			break;
+		case opType::equation:
+			operandCount = 2;
+			priority = 0;
+			OpPosition = opPosition::both;
 			break;
 		default:
 			break;
@@ -295,6 +313,20 @@ namespace algebra
 
 	void operation::unNest()
 	{
+		auto it = operands.begin();
+		while (it != operands.end())
+		{
+			if (it->type() == opType::set)
+			{
+				int pos = it - operands.begin();
+				operands.insert(operands.end(), it->operands.begin(), it->operands.end());
+				it = operands.begin() + pos;
+				it = operands.erase(it);
+			}
+			else
+				it++;
+		}
+
 		switch (Type)
 		{
 		case opType::sum:
@@ -319,19 +351,31 @@ namespace algebra
 		default:
 			break;
 		}
+
+		for (auto it = operands.begin(); it != operands.end(); it++)
+		{
+			if (it->type() == opType::set)
+			{
+				operands.insert(operands.end(), it->operands.begin(), it->operands.end());
+				operands.erase(it);
+				it--;
+			}
+		}
 	}
 
 	void operation::negate()
 	{
-		if (isNumber())
-		{		
-			if (std::holds_alternative<int>(value))
-				value = std::get<0>(value) * -1;
-			else if (std::holds_alternative<std::pair<int, int>>(value))
-			{
-				std::pair<int, int> val = std::get<1>(value);
-				value = std::pair<int, int>(-1 * val.first, val.second);
-			}
+		if (type() == opType::integer)
+			value = std::get<0>(value) * -1;
+		else if (type() == opType::rational)
+		{
+			std::pair<int, int> val = std::get<1>(value);
+			value = std::pair<int, int>(-1 * val.first, val.second);
+		}
+		else if (type() == opType::set)
+		{
+			for (auto& O : operands)
+				O.negate();
 		}
 		else
 		{
@@ -345,15 +389,19 @@ namespace algebra
 
 	void operation::invert()
 	{
-		if (isNumber())
+		if (Type == opType::integer)
 		{
-			if (std::holds_alternative<int>(value))
-				value = std::pair<int, int>(1, std::get<0>(value));
-			else if (std::holds_alternative <std::pair<int, int>>(value))
-			{
-				std::pair<int, int> val = std::get<1>(value);
+			value = std::pair<int, int>(1, std::get<0>(value));
+			Type = opType::rational;
+		}
+		else if (Type == opType::rational)
+		{
+			std::pair<int, int> val = std::get<1>(value);
+			if (val.first == 1)
+				*this = operation(val.second);
+			else
 				value = std::pair<int, int>(val.second, val.first);
-			}
+			
 		}
 		else if (Type == opType::power)
 		{
@@ -367,6 +415,21 @@ namespace algebra
 			op.addOperand(minus);
 			*this = op;
 		}		
+	}
+
+	bool operation::contains(opType O)
+	{
+		if (Type == O)
+			return true;
+
+		for (auto& k : operands)
+		{
+			if (k.Type == O)
+				return true;
+			if (k.contains(O))
+				return true;
+		}
+		return false;
 	}
 
 	std::variant<int, std::pair<int, int>, double> operation::getValue()
@@ -388,6 +451,16 @@ namespace algebra
 
 		switch (Type)
 		{
+		case opType::rational:
+		{
+			auto& val = std::get<1>(value);
+			if (val.second < 0)
+			{
+				val.first *= -1;
+				val.second *= -1;
+			}
+			return *this;
+		}
 		case opType::sum:
 		{
 			gatherTerms();
@@ -408,7 +481,7 @@ namespace algebra
 			}
 			//split negative powers, then distribute each seperately
 			splitFrac();
-			
+			unNest();
 			gatherTerms();
 			return *this;
 			break;
@@ -419,6 +492,14 @@ namespace algebra
 					O.factorise();
 			}
 			distribute();
+			return *this;
+			break;
+		case opType::GCD:
+			simpGCD();
+			return *this;
+			break;
+		case opType::equation:
+			solveEquation();
 			return *this;
 			break;
 		default:
@@ -452,6 +533,9 @@ namespace algebra
 		break;
 		case opType::variable:
 			output.push_back({ Symbol,charProps{} });
+			break;
+		case opType::complex:
+			output.push_back({ L'i',charProps{}});
 			break;
 		case opType::sum:
 			for (auto& k : operands)
@@ -564,6 +648,44 @@ namespace algebra
 			output.pop_back();
 			output.push_back({ ')',charProps() });
 			
+			break;
+		case opType::set:
+			output.push_back({ L'{',charProps() });
+			for (auto& k : operands)
+			{
+				auto temp = k.write();
+				output.insert(output.end(), temp.begin(), temp.end());
+				output.push_back({ L',',charProps() });
+			}
+			output.pop_back();
+			output.push_back({ L'}',charProps() });
+			break;
+		case opType::equation:
+		{
+			if (operands.size() == 0)
+			{
+				std::wstring S(L"This system has no solutions");
+				for (auto it = S.begin(); it != S.end(); it++)
+					output.push_back({ *it,charProps() });
+			}
+			else
+			{
+				auto temp = operands[0].write();
+				output.insert(output.end(), temp.begin(), temp.end());
+				output.push_back({ '=',charProps() });
+				temp = operands[1].write();
+				output.insert(output.end(), temp.begin(), temp.end());
+			}
+			break;
+		}
+		case opType::isIn:
+		{
+			auto temp = operands[0].write();
+			output.insert(output.end(), temp.begin(), temp.end());
+			output.push_back({ '∈', charProps() });
+			temp = operands[1].write();
+			output.insert(output.end(), temp.begin(), temp.end());
+		}
 			break;
 		default:
 			break;
@@ -770,7 +892,13 @@ namespace algebra
 						operation S(opType::sum);
 						S.addOperand(termIt->second);
 						S.addOperand(pow);
-						termIt->second = S.simplify();
+						S.simplify();
+						if (base.contains(opType::complex))
+						{
+							if (S.type() == opType::integer)
+								S.value = std::get<int>(value) % 4;
+						}
+						termIt->second = S;
 						break;
 					}
 					termIt++;
@@ -780,6 +908,9 @@ namespace algebra
 
 				it++;
 			}
+
+			if (fracTerm.second < 0)
+				fracTerm = fracTerm * std::pair(-1,-1);
 
 			termIt = terms.begin();
 			operation result(opType::product);
@@ -901,6 +1032,9 @@ namespace algebra
 	//split product into terms with positive powers and terms with negative powers
 	void operation::splitFrac()
 	{
+		if (Type != opType::product)
+			return;
+
 		operation top(opType::product);
 		operation bottom(opType::product);
 
@@ -940,8 +1074,29 @@ namespace algebra
 		*this = result;
 	}
 
+	void operation::simpGCD()
+	{
+		if (std::all_of(operands.begin(), operands.end(), [](operation& O) {return O.type() == opType::integer; }))
+		{
+			int result = 0;
+			for (auto& op : operands)
+				result = std::gcd(result, std::get<int>(op.value));
+			*this = operation(result);
+			return;
+		}
+	}
+
 	polynomial::polynomial(std::map<int, std::pair<int, int>> Terms) : terms(Terms)
 	{
+		auto iter = terms.begin();
+		iter++;
+		while (iter != terms.end())
+		{
+			auto coef = std::make_pair(iter->first, 1);
+			coef = coef * iter->second;
+			derivative.insert({ iter->first - 1,coef });
+			iter++;
+		}
 	}
 
 	polynomial::polynomial(operation op)
@@ -1042,6 +1197,17 @@ namespace algebra
 			for (int k=0; k<order;k++)
 				if (!terms.contains(k))
 					terms.insert({ k,std::make_pair(0,1) });
+
+			auto iter = terms.begin();
+			iter++;
+			while (iter != terms.end())
+			{
+				auto coef = std::make_pair(iter->first, 1);
+				coef = coef * iter->second;
+				derivative.insert({ iter->first - 1,coef });
+				iter++;
+			}
+
 		}
 		catch(std::string err)
 		{
@@ -1103,7 +1269,6 @@ namespace algebra
 
 		for (auto it = roots.begin(); it != roots.end(); it++)
 		{
-			
 			operation root = *it;
 			std::pair<int, int> rootPair;
 			if (root.Type == opType::integer)
